@@ -1,3 +1,3 @@
 # Inkedin
 
-changing normal language to linkedin post
+changing normal language text to linkedin post

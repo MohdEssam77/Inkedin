@@ -36,7 +36,7 @@ function sliderToTone(
   return {
     formality: p <= 4 ? "formal and professional" : p >= 7 ? "warm, friendly and approachable" : "balanced between professional and friendly",
     tone: s <= 4 ? "serious and authoritative" : s >= 7 ? "casual and conversational" : "balanced between serious and light",
-    length: sh <= 4 ? "concise (under 120 words, punchy sentences)" : sh >= 7 ? "detailed with 3 numbered key takeaways" : "medium length (150–250 words)",
+    length: sh <= 4 ? "very short — maximum 80 words, 2–3 tight sentences, no lists" : sh >= 7 ? "long and detailed — include 3 numbered key takeaways, aim for 250–350 words" : "medium — 120–180 words, no lists needed",
     boldness: sa <= 4 ? "safe, measured and diplomatic" : sa >= 7 ? "bold, provocative and opinionated" : "moderately confident",
     voice: pe <= 4 ? "personal first-person storytelling voice" : pe >= 7 ? "corporate, brand-representative voice" : "a mix of personal and professional voice",
   };
@@ -51,29 +51,37 @@ export function buildPrompt(
 ): string {
   const tones = sliderToTone(sliders);
 
-  const optionsList = [
-    toggles.hook && "Start with a strong attention-grabbing hook (a bold statement, counterintuitive claim, or intriguing question)",
-    toggles.emojis && "Sprinkle relevant emojis naturally throughout the post (not overdo it)",
-    toggles.cta && "End with a compelling call-to-action that invites comments or discussion",
-  ]
-    .filter(Boolean)
-    .join("\n- ");
+  // Build explicit DO and DO NOT rules for every toggle
+  const formattingRules = [
+    toggles.hook
+      ? "DO start with a strong attention-grabbing hook (a bold statement, counterintuitive claim, or intriguing question)"
+      : "DO NOT add any hook or dramatic opening line — start directly with the substance",
+    toggles.emojis
+      ? "DO sprinkle a few relevant emojis naturally throughout the post"
+      : "DO NOT use any emojis whatsoever — none at all",
+    toggles.cta
+      ? "DO end with a compelling call-to-action that invites comments or discussion"
+      : "DO NOT add any call-to-action or question at the end",
+  ].join("\n- ");
 
-  const followUpSection = followUpAnswers && followUpAnswers.length > 0
-    ? `\n\nThe user has provided additional details:\n${followUpAnswers
-        .map((qa, i) => `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`)
-        .join("\n")}`
-    : "";
+  const followUpSection =
+    followUpAnswers && followUpAnswers.length > 0
+      ? `\n\nThe user has provided additional details:\n${followUpAnswers
+          .map((qa, i) => `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`)
+          .join("\n")}`
+      : "";
 
   return `You are an expert LinkedIn content creator helping a ${role} craft a compelling, authentic LinkedIn post.
 
-TONE & STYLE REQUIREMENTS (follow these strictly):
+TONE & STYLE (follow every point exactly):
 - Formality: ${tones.formality}
 - Tone: ${tones.tone}
 - Length: ${tones.length}
 - Boldness: ${tones.boldness}
 - Voice: ${tones.voice}
-${optionsList ? `\nFORMATTING OPTIONS (include all of these):\n- ${optionsList}` : ""}
+
+FORMATTING RULES (these are strict — obey every DO and DO NOT):
+- ${formattingRules}
 
 TOPIC/IDEA FROM THE USER:
 "${topic}"${followUpSection}
@@ -81,7 +89,7 @@ TOPIC/IDEA FROM THE USER:
 TASK:
 ${
   followUpAnswers && followUpAnswers.length > 0
-    ? `The user has answered your follow-up questions. Now write the full LinkedIn post using all available information.`
+    ? `The user has answered your follow-up questions. Now write the full LinkedIn post using all available information. Obey every tone, length, and formatting rule above strictly.`
     : `First, evaluate whether you have enough specific, concrete details to write a compelling and authentic LinkedIn post.
 
 A good LinkedIn post needs: specific context (dates, places, numbers, outcomes), emotional resonance, and concrete details — not vague statements.
@@ -89,7 +97,8 @@ A good LinkedIn post needs: specific context (dates, places, numbers, outcomes),
 Example of NOT enough detail: "I won a hackathon" (needs: when? where? what challenge? who else? what did you build? what did you learn?)
 Example of ENOUGH detail: "Last weekend I won first place at HackMIT 2024 by building an AI tool that reduced hospital readmission rates by 40% in 48 hours with a team of 3."
 
-If the topic lacks specific details, ask up to 3 focused questions to gather what you need.`
+If the topic lacks specific details, ask up to 3 focused questions to gather what you need.
+If you have enough detail, write the post — obeying every tone, length, and formatting rule above strictly.`
 }
 
 RESPONSE FORMAT:

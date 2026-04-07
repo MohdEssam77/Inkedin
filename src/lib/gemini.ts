@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { LinkedInProfile } from "@/lib/linkedinScraper";
 
 export class RateLimitError extends Error {
   constructor() {
@@ -47,7 +48,8 @@ export function buildPrompt(
   role: string,
   sliders: Record<string, number>,
   toggles: Record<string, boolean>,
-  followUpAnswers?: { question: string; answer: string }[]
+  followUpAnswers?: { question: string; answer: string }[],
+  profile?: LinkedInProfile | null
 ): string {
   const tones = sliderToTone(sliders);
 
@@ -63,6 +65,16 @@ export function buildPrompt(
       ? "DO end with a compelling call-to-action that invites comments or discussion"
       : "DO NOT add any call-to-action or question at the end",
   ].join("\n- ");
+
+  const profileSection = profile
+    ? `\n\nPROFILE INFO (use this to personalise the post — match their voice and background):\n${[
+        profile.name && `- Name: ${profile.name}`,
+        profile.headline && `- Headline: ${profile.headline}`,
+        profile.about && `- About: ${profile.about}`,
+      ]
+        .filter(Boolean)
+        .join("\n")}`
+    : "";
 
   const followUpSection =
     followUpAnswers && followUpAnswers.length > 0
@@ -84,7 +96,7 @@ FORMATTING RULES (these are strict — obey every DO and DO NOT):
 - ${formattingRules}
 
 TOPIC/IDEA FROM THE USER:
-"${topic}"${followUpSection}
+"${topic}"${profileSection}${followUpSection}
 
 TASK:
 ${

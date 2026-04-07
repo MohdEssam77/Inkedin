@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ExternalLink,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +29,7 @@ import {
   getApiKey,
   RateLimitError,
 } from "@/lib/gemini";
+import type { LinkedInProfile } from "@/lib/linkedinScraper";
 
 interface SliderConfig {
   key: string;
@@ -58,7 +60,6 @@ type Phase = "idle" | "loading" | "follow-up" | "done" | "rate-limited";
 
 const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
   const [topic, setTopic] = useState("");
-  const [profileUrl, setProfileUrl] = useState("");
   const [role, setRole] = useState("CEO");
   const [sliders, setSliders] = useState<Record<string, number>>(
     Object.fromEntries(SLIDERS.map((s) => [s.key, 5]))
@@ -72,6 +73,16 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
   // Follow-up questions state
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
+
+  // Profile form state
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [profileHeadline, setProfileHeadline] = useState("");
+  const [profileAbout, setProfileAbout] = useState("");
+
+  const effectiveProfile: LinkedInProfile | null =
+    profileHeadline.trim() || profileAbout.trim()
+      ? { headline: profileHeadline.trim() || undefined, about: profileAbout.trim() || undefined }
+      : null;
 
   // API key state
   const [showKeyInput, setShowKeyInput] = useState(false);
@@ -102,7 +113,7 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
     setAnswers([]);
 
     try {
-      const prompt = buildPrompt(topic, role, sliders, toggles);
+      const prompt = buildPrompt(topic, role, sliders, toggles, undefined, effectiveProfile);
       const response = await callGemini(prompt, getApiKey());
 
       if (response.needsMoreInfo === true) {
@@ -132,7 +143,7 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
     setPhase("loading");
 
     try {
-      const prompt = buildPrompt(topic, role, sliders, toggles, followUpAnswers);
+      const prompt = buildPrompt(topic, role, sliders, toggles, followUpAnswers, effectiveProfile);
       const response = await callGemini(prompt, getApiKey());
 
       if (response.needsMoreInfo === true) {
@@ -193,15 +204,63 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
                   className="w-full h-24 rounded-xl bg-surface-elevated border border-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
 
-                <Label className="text-sm font-semibold text-foreground">
-                  LinkedIn profile URL (optional)
-                </Label>
-                <input
-                  value={profileUrl}
-                  onChange={(e) => setProfileUrl(e.target.value)}
-                  placeholder="https://linkedin.com/in/yourname"
-                  className="w-full rounded-xl bg-surface-elevated border border-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                {/* Profile info toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowProfileForm((v) => !v)}
+                  className="flex items-center gap-2 text-sm font-semibold text-foreground w-full text-left"
+                >
+                  <UserCircle className="w-4 h-4 text-muted-foreground" />
+                  Personalise with your profile
+                  <ChevronRight
+                    className={`w-4 h-4 ml-auto text-muted-foreground transition-transform ${showProfileForm ? "rotate-90" : ""}`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {showProfileForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-3 pt-1">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Your headline / job title
+                          </Label>
+                          <input
+                            value={profileHeadline}
+                            onChange={(e) => setProfileHeadline(e.target.value)}
+                            placeholder="e.g. Software Engineer at Google · Open source"
+                            className="w-full rounded-xl bg-surface-elevated border border-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">
+                            Your About section{" "}
+                            <span className="text-muted-foreground/60">
+                              (paste from LinkedIn)
+                            </span>
+                          </Label>
+                          <textarea
+                            value={profileAbout}
+                            onChange={(e) => setProfileAbout(e.target.value)}
+                            placeholder="Paste your LinkedIn About section here — the AI will match your voice and background..."
+                            rows={3}
+                            className="w-full rounded-xl bg-surface-elevated border border-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                          />
+                        </div>
+                        {effectiveProfile && (
+                          <p className="text-xs text-primary">
+                            ✓ Profile info will be used to personalise your post
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <Label className="text-sm font-semibold text-foreground">Poster identity</Label>
                 <Select value={role} onValueChange={setRole}>
@@ -475,7 +534,14 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
                 className="mt-8 rounded-2xl bg-card border border-border p-6"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-foreground">Your LinkedIn Post</h3>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Your LinkedIn Post</h3>
+                    {effectiveProfile && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Personalised using your profile info
+                      </p>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleRegenerate}

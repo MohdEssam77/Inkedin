@@ -54,6 +54,7 @@ const ROLES = [
   "Marketer",
   "Recruiter",
   "Software Engineer",
+  "Other",
 ];
 
 type Phase = "idle" | "loading" | "follow-up" | "done" | "rate-limited";
@@ -61,6 +62,8 @@ type Phase = "idle" | "loading" | "follow-up" | "done" | "rate-limited";
 const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
   const [topic, setTopic] = useState("");
   const [role, setRole] = useState("CEO");
+  const [customRole, setCustomRole] = useState("");
+  const effectiveRole = role === "Other" ? customRole.trim() || "Professional" : role;
   const [sliders, setSliders] = useState<Record<string, number>>(
     Object.fromEntries(SLIDERS.map((s) => [s.key, 5]))
   );
@@ -113,7 +116,7 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
     setAnswers([]);
 
     try {
-      const prompt = buildPrompt(topic, role, sliders, toggles, undefined, effectiveProfile);
+      const prompt = buildPrompt(topic, effectiveRole, sliders, toggles, undefined, effectiveProfile);
       const response = await callGemini(prompt, getApiKey());
 
       if (response.needsMoreInfo === true) {
@@ -143,7 +146,7 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
     setPhase("loading");
 
     try {
-      const prompt = buildPrompt(topic, role, sliders, toggles, followUpAnswers, effectiveProfile);
+      const prompt = buildPrompt(topic, effectiveRole, sliders, toggles, followUpAnswers, effectiveProfile);
       const response = await callGemini(prompt, getApiKey());
 
       if (response.needsMoreInfo === true) {
@@ -205,17 +208,23 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
                 />
 
                 {/* Profile info toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowProfileForm((v) => !v)}
-                  className="flex items-center gap-2 text-sm font-semibold text-foreground w-full text-left"
-                >
-                  <UserCircle className="w-4 h-4 text-muted-foreground" />
-                  Personalise with your profile
-                  <ChevronRight
-                    className={`w-4 h-4 ml-auto text-muted-foreground transition-transform ${showProfileForm ? "rotate-90" : ""}`}
-                  />
-                </button>
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileForm((v) => !v)}
+                    className="flex items-center gap-2 text-sm font-semibold text-foreground w-full text-left"
+                  >
+                    <UserCircle className="w-4 h-4 text-muted-foreground" />
+                    Personalise with your profile
+                    <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+                    <ChevronRight
+                      className={`w-4 h-4 ml-auto text-muted-foreground transition-transform ${showProfileForm ? "rotate-90" : ""}`}
+                    />
+                  </button>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    Add your headline or bio so the AI writes in your voice and fits your background.
+                  </p>
+                </div>
 
                 <AnimatePresence>
                   {showProfileForm && (
@@ -275,6 +284,23 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
                     ))}
                   </SelectContent>
                 </Select>
+                <AnimatePresence>
+                  {role === "Other" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <input
+                        value={customRole}
+                        onChange={(e) => setCustomRole(e.target.value)}
+                        placeholder="e.g. Data Scientist, Product Manager, Freelancer..."
+                        className="w-full rounded-xl bg-surface-elevated border border-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring mt-2"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Toggles */}

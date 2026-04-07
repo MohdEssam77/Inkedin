@@ -1,5 +1,6 @@
 import { Pen } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import PostHistory from "./PostHistory";
 
 const Navbar = () => (
   <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
@@ -10,7 +11,10 @@ const Navbar = () => (
         </div>
         <span className="font-display font-bold text-xl text-foreground">InkedIn</span>
       </div>
-      <ThemeToggle />
+      <div className="flex items-center gap-2">
+        <PostHistory />
+        <ThemeToggle />
+      </div>
     </div>
   </nav>
 );

@@ -30,6 +30,7 @@ import {
   RateLimitError,
 } from "@/lib/gemini";
 import type { LinkedInProfile } from "@/lib/linkedinScraper";
+import { addToHistory } from "@/lib/history";
 
 interface SliderConfig {
   key: string;
@@ -126,6 +127,8 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
       } else if (response.needsMoreInfo === false) {
         setResult(response.post);
         setPhase("done");
+        addToHistory(topic, response.post);
+        window.dispatchEvent(new Event("inkedin:history-updated"));
       }
     } catch (err) {
       if (err instanceof RateLimitError) {
@@ -156,6 +159,8 @@ const PostGenerator = forwardRef<HTMLDivElement>((_, ref) => {
       } else if (response.needsMoreInfo === false) {
         setResult(response.post);
         setPhase("done");
+        addToHistory(topic, response.post);
+        window.dispatchEvent(new Event("inkedin:history-updated"));
       }
     } catch (err) {
       if (err instanceof RateLimitError) {

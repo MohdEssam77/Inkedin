@@ -15,7 +15,7 @@ InkedIn takes a topic or idea you want to post about and turns it into a polishe
 ## Features
 
 - **AI generation** — powered by Google Gemini 2.5 Flash
-- **Smart follow-up questions** — if your topic lacks detail the AI asks up to 3 targeted questions before generating
+- **Smart follow-up questions** — if your prompt lacks detail the AI asks up to 3 targeted questions before generating
 - **Tone & style sliders** — fine-tune 5 dimensions:
   - Professional ↔ Friendly
   - Serious ↔ Casual
